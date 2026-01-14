@@ -107,7 +107,7 @@ const Home = () => {
         {noMessages ? (
           <>
             <p className="starter-text" style={{ fontWeight: 600, color: 'white'}}>
-              Ask a goal-focused question about Data Structures, Algorithms, Web Development, or Research.
+              Ask me anything about Data Structures, Algorithms, Web Development, Research, and beyond...
             </p>
             <br />
             <PromptSuggestionRow onPromptClick={handlePrompt} />
