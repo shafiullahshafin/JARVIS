@@ -100,7 +100,7 @@ const Home = () => {
         width={170} 
         height={42} 
         alt="Jarvis Logo" 
-        style={{ marginTop: "-8px" }} 
+        style={{ marginTop: "-70px" }} 
       />
 
       <section ref={sectionRef} className={noMessages ? "" : "populated"}>
