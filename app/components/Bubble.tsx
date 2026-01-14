@@ -13,6 +13,7 @@ interface BubbleProps {
     message: Message;
 }
 
+// Renders a single chat bubble for either the user or the assistant
 const Bubble = ({ message }: BubbleProps) => {
     const { content, role } = message;
     

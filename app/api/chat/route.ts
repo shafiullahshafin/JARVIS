@@ -11,10 +11,12 @@ const {
   JINA_API_KEY
 } = process.env;
 
+// Configures the Groq client with the API key from environment variables
 const groq = new Groq({ apiKey: GROQ_API_KEY });
 const client = new DataAPIClient(ASTRA_DB_APPLICATION_TOKEN!);
 const db = client.db(ASTRA_DB_API_ENDPOINT!, { keyspace: ASTRA_DB_KEYSPACE });
 
+// Requests an embedding vector from Jina AI for a given text
 async function getJinaEmbedding(text: string) {
   const response = await fetch('https://api.jina.ai/v1/embeddings', {
     method: 'POST',
@@ -32,6 +34,55 @@ async function getJinaEmbedding(text: string) {
   return data.data[0].embedding;
 }
 
+// Pauses execution for a given number of milliseconds
+async function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Queries Astra DB with retries to handle cold starts and transient errors
+async function queryAstraWithVector(vector: number[], retries: number = 2, baseDelayMs: number = 1000) {
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const collection = await db.collection(ASTRA_DB_COLLECTION);
+      const cursor = collection.find(null, {
+        sort: { $vector: vector },
+        limit: 10
+      });
+
+      const docs = await cursor.toArray();
+      return docs;
+    } catch (error) {
+      lastError = error;
+      if (attempt < retries) {
+        const delay = baseDelayMs * (attempt + 1);
+        await sleep(delay);
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+type WebSearchResult = {
+  title: string;
+  snippet: string;
+  link: string;
+};
+
+type GroqChatMessage = {
+  role: "system" | "user" | "assistant";
+  content: string;
+};
+
+type IncomingMessage = {
+  role: string;
+  content?: string;
+  text?: string;
+};
+
+// Performs a web search using the Serper API when live context is needed
 async function webSearch(query: string) {
   try {
     const response = await fetch('https://google.serper.dev/search', {
@@ -46,18 +97,20 @@ async function webSearch(query: string) {
     if (!response.ok) return null;
     
     const data = await response.json();
-    const results = data.organic?.slice(0, 5) || [];
+    const rawResults = (data.organic ?? []) as WebSearchResult[];
+    const results = rawResults.slice(0, 5);
     
-    return results.map((r: any) => ({
+    return results.map((r) => ({
       title: r.title,
       snippet: r.snippet,
       link: r.link
     }));
-  } catch (error) {
+  } catch {
     return null;
   }
 }
 
+// Handles chat completion requests and orchestrates RAG plus web search
 export async function POST(req: Request) {
   try {
     const { messages } = await req.json();
@@ -85,13 +138,7 @@ export async function POST(req: Request) {
         vector = vector.slice(0, 1024);
       }
 
-      const collection = await db.collection(ASTRA_DB_COLLECTION);
-      const cursor = collection.find(null, {
-        sort: { $vector: vector },
-        limit: 10
-      });
-
-      const docs = await cursor.toArray();
+      const docs = await queryAstraWithVector(vector);
       
       if (!docs || docs.length === 0 || docs.every(d => !d.text || d.text.trim().length < 50)) {
         shouldSearchWeb = true;
@@ -99,7 +146,7 @@ export async function POST(req: Request) {
         const docsMap = docs.map((d) => d.text);
         docContext = JSON.stringify(docsMap);
       }
-    } catch (error) {
+    } catch {
       docContext = "";
       shouldSearchWeb = true;
     }
@@ -112,7 +159,7 @@ export async function POST(req: Request) {
     if (needsWebSearch && SERPER_API_KEY) {
       const searchResults = await webSearch(latestMessage);
       if (searchResults && searchResults.length > 0) {
-        webContext = `\n\nWEB SEARCH RESULTS:\n${searchResults.map((r: any) => 
+        webContext = `\n\nWEB SEARCH RESULTS:\n${searchResults.map((r: WebSearchResult) => 
           `- ${r.title}: ${r.snippet} (${r.link})`
         ).join('\n')}`;
       }
@@ -143,14 +190,14 @@ export async function POST(req: Request) {
         ${webContext}
     `;
 
-    const groqMessages: any[] = [
+    const groqMessages: GroqChatMessage[] = [
       { role: "system", content: systemPrompt }
     ];
 
-    messages.forEach((msg: any) => {
+    messages.forEach((msg: IncomingMessage) => {
       groqMessages.push({
-        role: msg.role,
-        content: msg.content || msg.text
+        role: msg.role === "assistant" || msg.role === "user" ? msg.role : "user",
+        content: msg.content || msg.text || ""
       });
     });
 

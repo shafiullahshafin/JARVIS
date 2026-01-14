@@ -1,40 +1,120 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+## JARVIS – AI Assistant for CS, Algorithms, Web Dev & Research
 
-## Getting Started
+JARVIS is an AI assistant focused on Computer Science, Algorithms, Web Development, and Technical Research.  
+It combines a curated CS knowledge base in Astra DB with live web search and a Groq LLM to give concise, goal‑focused answers.
 
-First, run the development server:
+---
+
+## Features
+
+- **Goal‑focused chat interface**
+  - Streaming assistant responses
+  - Prompt suggestions to inspire useful queries
+  - Responsive layout for mobile, tablet, and desktop
+
+- **Retrieval‑Augmented Generation (RAG)**
+  - Curated CS / programming / research sources
+  - Text chunking and embeddings with Jina v3
+  - Vector search over Astra DB to pull relevant context
+
+- **Web search fallback (optional)**
+  - Uses Serper to answer time‑sensitive or out‑of‑scope questions
+  - Merges web snippets into the context shown to the LLM
+
+- **Math & formatting**
+  - Markdown rendering with `react-markdown`
+  - LaTeX math via `remark-math` + `rehype-katex`
+  - Good for complexity analysis and algorithm derivations
+
+---
+
+## Tech Stack
+
+- **Frontend**
+  - Next.js (App Router), React, TypeScript
+  - Streaming chat UI with `ReadableStream`
+
+- **Backend**
+  - Next.js API routes under `app/api/*`
+  - Groq (LLaMA 3.3 70B) for chat completions
+  - Jina embeddings v3 for text embeddings
+  - Serper for web search (optional)
+
+- **RAG / data ingestion**
+  - DataStax Astra DB as vector store
+  - LangChain loaders for web pages, PDFs, and PPTX
+
+---
+
+## Quick Start
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Create `.env.local` (or equivalent) and set:
+
+```env
+ASTRA_DB_KEYSPACE=your_keyspace
+ASTRA_DB_COLLECTION=your_collection
+ASTRA_DB_API_ENDPOINT=your_astra_endpoint
+ASTRA_DB_APPLICATION_TOKEN=your_astra_token
+
+GROQ_API_KEY=your_groq_key
+JINA_API_KEY=your_jina_key
+SERPER_API_KEY=your_serper_key   # optional
+```
+
+Run the dev server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+## RAG Data & Seeding
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+The app expects an Astra collection populated with embedded CS content.
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+Sources:
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- URLs listed in `data/csWebsites.ts`
+- Optional PDFs/PPTX placed in the `pdfs/` directory
 
-## Learn More
+To (re)build the Astra collection:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run seed
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+This script:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Drops and recreates the collection with a 1024‑dimensional vector field
+- Scrapes configured URLs and loads local PDFs/PPTX
+- Splits text into chunks and embeds with Jina
+- Inserts documents into Astra DB with `$vector`, `text`, and `source`
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## How to Collaborate
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+- Open an issue if you:
+  - Find a bug in the chat flow or RAG results
+  - Have ideas for better sources to add to `data/csWebsites.ts`
+  - Want to discuss model or UX changes
+
+- For code changes:
+  - Fork the repository
+  - Create a feature branch from `main`
+  - Run `npm run lint` and `npm run seed` if you touch RAG logic
+  - Open a pull request with a short description of:
+    - What changed
+    - How to reproduce or test it
+
+- Focus areas that are especially welcome:
+  - Better CS/algorithms/web dev sources
+  - UI/UX improvements to keep the chat goal‑focused
+  - Reliability and error‑handling improvements around Astra DB and external APIs

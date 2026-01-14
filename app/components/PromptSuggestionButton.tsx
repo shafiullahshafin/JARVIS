@@ -3,6 +3,7 @@ interface PromptSuggestionButtonProps {
     onClick: () => void;
 }
 
+// Renders a clickable suggestion button with a sample prompt
 const PromptSuggestionButton = ({ text, onClick }: PromptSuggestionButtonProps) => {
     return (
         <button 

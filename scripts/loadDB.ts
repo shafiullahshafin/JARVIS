@@ -75,8 +75,8 @@ async function scrapePage(url: string, retries = MAX_RETRIES): Promise<string> {
     });
 
     return (await loader.scrape())?.replace(/<[^>]*>?/gm, "") || "";
-  } catch (error: any) {
-    if (retries > 0 && !error.message?.includes('ERR_NAME_NOT_RESOLVED')) {
+  } catch (error: unknown) {
+    if (retries > 0 && !(error instanceof Error && error.message.includes('ERR_NAME_NOT_RESOLVED'))) {
       await new Promise(resolve => setTimeout(resolve, 2000));
       return scrapePage(url, retries - 1);
     }
@@ -94,7 +94,11 @@ async function createCollection(similarityMetric: SimilarityMetric = "cosine") {
   });
 }
 
-async function loadWebsites(collection: any) {
+type AstraCollection = {
+  insertMany: (documents: unknown[]) => Promise<unknown>;
+};
+
+async function loadWebsites(collection: AstraCollection) {
   let processed = 0;
   let failed = 0;
   const failedUrls: string[] = [];
@@ -134,7 +138,7 @@ async function loadWebsites(collection: any) {
           }
           
           processed++;
-        } catch (error: any) {
+        } catch {
           failed++;
           failedUrls.push(url);
         }
@@ -149,7 +153,7 @@ async function loadWebsites(collection: any) {
   console.log(`Websites: ${processed} processed, ${failed} failed`);
 }
 
-async function loadDocuments(collection: any) {
+async function loadDocuments(collection: AstraCollection) {
   if (!fs.existsSync(DOCS_FOLDER)) {
     return;
   }

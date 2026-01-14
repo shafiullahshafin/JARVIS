@@ -21,12 +21,14 @@ const Home = () => {
 
   const noMessages = messages.length === 0;
 
+  // Keeps the chat view scrolled to the most recent message
   useEffect(() => {
     if (sectionRef.current) {
       sectionRef.current.scrollTop = sectionRef.current.scrollHeight;
     }
   }, [messages]);
 
+  // Sends a user message and streams the assistant response
   const sendMessage = async (content: string) => {
     const userMessage: Message = { role: "user", content, id: Date.now().toString() };
     setMessages(prev => [...prev, userMessage]);
@@ -77,12 +79,14 @@ const Home = () => {
     }
   };
 
+  // Sends a selected prompt suggestion as a user message
   const handlePrompt = async (promptText: string) => {
     await sendMessage(promptText);
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  // Handles the chat form submission from the input box
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!inputText.trim()) return;
 
     await sendMessage(inputText);
@@ -96,21 +100,21 @@ const Home = () => {
         width={170} 
         height={42} 
         alt="Jarvis Logo" 
-        style={{ marginTop: "-70px" }} 
+        style={{ marginTop: "-8px" }} 
       />
 
       <section ref={sectionRef} className={noMessages ? "" : "populated"}>
         {noMessages ? (
           <>
             <p className="starter-text" style={{ fontWeight: 600, color: 'white'}}>
-              Ask me anything about Data Structures, Algorithms, Web Development, Research, and beyond...
+              Ask a goal-focused question about Data Structures, Algorithms, Web Development, or Research.
             </p>
             <br />
             <PromptSuggestionRow onPromptClick={handlePrompt} />
           </>
         ) : (
           <>
-            {messages.map((message, index) => (
+            {messages.map((message) => (
               <Bubble key={message.id} message={message} />
             ))}
             {isLoading && <LoadingBubble />}

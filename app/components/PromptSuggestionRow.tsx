@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import PromptSuggestionButton from './PromptSuggestionButton';
 
 interface PromptSuggestionRowProps {
@@ -56,25 +56,16 @@ const shuffleArray = <T,>(array: T[]): T[] => {
     return shuffled;
 };
 
+// Displays a row of example prompts to guide the user
 const PromptSuggestionRow = ({ onPromptClick }: PromptSuggestionRowProps) => {
     const allPrompts = useMemo(
         () => Object.values(PROMPT_CATEGORIES).flat(),
         []
     );
     
-    const defaultPrompts = useMemo(
-        () => allPrompts.slice(0, PROMPTS_TO_DISPLAY),
-        [allPrompts]
+    const [prompts] = useState<string[]>(() => 
+        shuffleArray(allPrompts).slice(0, PROMPTS_TO_DISPLAY)
     );
-    
-    const [prompts, setPrompts] = useState<string[]>(defaultPrompts);
-    const [isClient, setIsClient] = useState(false);
-    
-    useEffect(() => {
-        setIsClient(true);
-        const shuffled = shuffleArray(allPrompts);
-        setPrompts(shuffled.slice(0, PROMPTS_TO_DISPLAY));
-    }, [allPrompts]);
     
     const handlePromptClick = (prompt: string) => {
         try {
@@ -89,7 +80,7 @@ const PromptSuggestionRow = ({ onPromptClick }: PromptSuggestionRowProps) => {
             <div className="prompt-suggestion-row">
                 {prompts.slice(0, 2).map((prompt, index) => (
                     <PromptSuggestionButton 
-                        key={isClient ? `${prompt}-${index}` : `default-${index}`}
+                        key={`${prompt}-${index}`}
                         text={prompt}
                         onClick={() => handlePromptClick(prompt)}
                     />
@@ -98,7 +89,7 @@ const PromptSuggestionRow = ({ onPromptClick }: PromptSuggestionRowProps) => {
             <div className="prompt-suggestion-row">
                 {prompts.slice(2, 4).map((prompt, index) => (
                     <PromptSuggestionButton 
-                        key={isClient ? `${prompt}-${index + 2}` : `default-${index + 2}`}
+                        key={`${prompt}-${index + 2}`}
                         text={prompt}
                         onClick={() => handlePromptClick(prompt)}
                     />
